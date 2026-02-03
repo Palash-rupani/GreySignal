@@ -6,6 +6,10 @@ investors should apply.
 
 ---
 
+## Project Documentaion
+-https://docs.google.com/document/d/1EOJDnqaCvTLfFMGPiRTyavlOOKWewe9dmcUq23U-_5Y/edit?usp=sharing
+
+---
 ## 📌 What GreySignal Does
 
 - Scrapes social platforms (Reddit, X, forums) and financial news for IPO discussions
