@@ -1,3 +1,5 @@
+###dead code - not used in final version, but may be useful for future reference
+
 import snscrape.modules.twitter as sntwitter
 import pandas as pd
 from datetime import datetime
@@ -29,3 +31,4 @@ os.makedirs("data/raw", exist_ok=True)
 df.to_csv("data/raw/twitter_ipo_posts.csv", index=False)
 
 print(f"Saved {len(df)} tweets.")
+##
