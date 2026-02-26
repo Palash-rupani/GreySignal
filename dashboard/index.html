@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GreySignal — IPO Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        primary:      "#00e6a1",
+        "bg-dark":    "#080c10",
+        surface:      "#0d1117",
+        surface2:     "#131920",
+        "accent-purple": "#a855f7",
+        "accent-gold":   "#eab308",
+        "apply-color":   "#00e6a1",
+        "avoid-color":   "#ef4444",
+        "neutral-color": "#4a9eff",
+      },
+      fontFamily: {
+        display: ["Manrope", "sans-serif"],
+        mono:    ["JetBrains Mono", "monospace"],
+      },
+    },
+  },
+}
+</script>
+<style>
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: #080c10;
+  background-image:
+    linear-gradient(to right, rgba(31,41,55,0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(31,41,55,0.12) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.data-font { font-family: 'JetBrains Mono', monospace; }
+
+@keyframes pulse-glow {
+  0%   { transform:scale(0.95); box-shadow:0 0 0 0 rgba(0,230,161,0.7); }
+  70%  { transform:scale(1);    box-shadow:0 0 0 10px rgba(0,230,161,0); }
+  100% { transform:scale(0.95); box-shadow:0 0 0 0 rgba(0,230,161,0); }
+}
+.pulsing-dot { animation: pulse-glow 2s infinite; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.fade-up { animation: fadeUp 0.4s ease both; }
+.fade-up-1 { animation: fadeUp 0.4s 0.05s ease both; }
+.fade-up-2 { animation: fadeUp 0.4s 0.10s ease both; }
+.fade-up-3 { animation: fadeUp 0.4s 0.15s ease both; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#1f2937; border-radius:3px; }
+
+/* Modal backdrop blur */
+.modal-backdrop {
+  backdrop-filter: blur(12px);
+  background: rgba(8,12,16,0.85);
+}
+
+/* Gauge SVG */
+.gauge-wrap { position:relative; }
+
+/* Score bar animation */
+.score-fill { transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+/* Row hover */
+tbody tr { transition: background 0.15s; }
+
+/* Chip hover */
+.filter-chip { transition: all 0.15s; }
+</style>
+</head>
+<body class="text-slate-100 min-h-screen">
+<div class="flex flex-col min-h-screen">
+
+  <!-- ── HEADER ── -->
+  <header class="sticky top-0 z-50 border-b border-slate-800 bg-[#080c10]/90 backdrop-blur-md">
+    <div class="flex items-center justify-between px-10 py-4">
+      <!-- Logo -->
+      <div class="flex items-center gap-8">
+        <div class="flex items-center gap-3">
+          <div class="relative flex items-center justify-center size-7">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M11 2L3 7v8l8 5 8-5V7L11 2z" stroke="#00e6a1" stroke-width="1.5" fill="none"/>
+              <path d="M11 6l-4 2.5v5L11 16l4-2.5v-5L11 6z" fill="#00e6a1" opacity="0.3"/>
+            </svg>
+            <span class="absolute -top-1 -right-1 size-2 rounded-full bg-primary pulsing-dot"></span>
+          </div>
+          <span class="text-white text-xl font-extrabold tracking-tight font-display">GreySignal</span>
+        </div>
+        <nav class="hidden md:flex items-center gap-7">
+          <a href="#" class="text-primary text-sm font-semibold">Dashboard</a>
+          <a href="#" class="text-slate-500 hover:text-white text-sm font-medium transition-colors">Market</a>
+          <a href="#" class="text-slate-500 hover:text-white text-sm font-medium transition-colors">Sentiment</a>
+          <a href="#" class="text-slate-500 hover:text-white text-sm font-medium transition-colors">Reports</a>
+        </nav>
+      </div>
+      <!-- Right side -->
+      <div class="flex items-center gap-4">
+        <div class="relative hidden md:block">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">search</span>
+          <input id="headerSearch" type="text" placeholder="Search IPOs..."
+            class="bg-surface border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary/50 w-52 transition-colors"/>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+          <span class="size-2 rounded-full bg-primary pulsing-dot"></span>
+          <span class="text-primary text-[10px] font-extrabold tracking-widest uppercase">Live</span>
+        </div>
+        <div class="text-slate-500 text-[11px] font-mono hidden lg:block" id="lastUpdated">—</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 px-10 py-8 flex flex-col gap-8">
+
+    <!-- ── STATS ROW ── -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 fade-up">
+      <div class="flex flex-col gap-2 rounded-xl p-5 bg-surface border-t-2 border-t-primary border border-slate-800">
+        <p class="text-slate-500 text-[10px] font-extrabold uppercase tracking-widest">Total IPOs</p>
+        <p class="text-white text-4xl font-extrabold font-display" id="statTotal">—</p>
+        <p class="text-slate-600 text-xs">tracked this session</p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-5 bg-surface border-t-2 border-t-primary border border-slate-800">
+        <p class="text-slate-500 text-[10px] font-extrabold uppercase tracking-widest">Apply</p>
+        <p class="text-primary text-4xl font-extrabold font-display" id="statApply">—</p>
+        <p class="text-slate-600 text-xs">positive signal</p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-5 bg-surface border-t-2 border-t-blue-500 border border-slate-800">
+        <p class="text-slate-500 text-[10px] font-extrabold uppercase tracking-widest">Neutral</p>
+        <p class="text-blue-400 text-4xl font-extrabold font-display" id="statNeutral">—</p>
+        <p class="text-slate-600 text-xs">watch & wait</p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-5 bg-surface border-t-2 border-t-red-500 border border-slate-800">
+        <p class="text-slate-500 text-[10px] font-extrabold uppercase tracking-widest">Avoid</p>
+        <p class="text-red-400 text-4xl font-extrabold font-display" id="statAvoid">—</p>
+        <p class="text-slate-600 text-xs">negative sentiment</p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-5 bg-surface border-t-2 border-t-yellow-500 border border-slate-800">
+        <p class="text-slate-500 text-[10px] font-extrabold uppercase tracking-widest">Articles</p>
+        <p class="text-yellow-400 text-4xl font-extrabold font-display" id="statArticles">—</p>
+        <p class="text-slate-600 text-xs">news analyzed</p>
+      </div>
+    </div>
+
+    <!-- ── CONTROLS ── -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 fade-up-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="setFilter('ALL')"     id="btn-ALL"     class="filter-chip px-4 py-2 rounded-lg text-sm font-bold bg-primary text-[#080c10] border border-primary">All Signals</button>
+        <button onclick="setFilter('APPLY')"   id="btn-APPLY"   class="filter-chip px-4 py-2 rounded-lg text-sm font-semibold bg-surface border border-slate-800 text-slate-300 hover:border-primary/40">
+          <span class="inline-block size-2 rounded-full bg-primary mr-1.5"></span>Apply
+        </button>
+        <button onclick="setFilter('NEUTRAL')" id="btn-NEUTRAL" class="filter-chip px-4 py-2 rounded-lg text-sm font-semibold bg-surface border border-slate-800 text-slate-300 hover:border-blue-500/40">
+          <span class="inline-block size-2 rounded-full bg-blue-400 mr-1.5"></span>Neutral
+        </button>
+        <button onclick="setFilter('AVOID')"   id="btn-AVOID"   class="filter-chip px-4 py-2 rounded-lg text-sm font-semibold bg-surface border border-slate-800 text-slate-300 hover:border-red-500/40">
+          <span class="inline-block size-2 rounded-full bg-red-400 mr-1.5"></span>Avoid
+        </button>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-slate-500 text-sm">Confidence:</span>
+        <select id="confSelect" onchange="setConf(this.value)"
+          class="bg-surface border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-primary/50">
+          <option value="ALL">All</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+        <span class="text-slate-500 text-sm">Sort:</span>
+        <select id="sortSelect" onchange="setSort(this.value)"
+          class="bg-surface border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-primary/50">
+          <option value="score_desc">Score ↓</option>
+          <option value="score_asc">Score ↑</option>
+          <option value="articles_desc">Articles ↓</option>
+          <option value="name_asc">Name A–Z</option>
+        </select>
+        <button onclick="exportCSV()" title="Export CSV"
+          class="p-2 rounded-lg bg-surface border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition-colors">
+          <span class="material-symbols-outlined text-[18px]">download</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── TABLE ── -->
+    <div class="rounded-xl border border-slate-800 bg-surface/60 backdrop-blur-sm overflow-hidden shadow-2xl fade-up-2">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-900/60 text-slate-500 text-[10px] uppercase tracking-widest border-b border-slate-800">
+            <th class="px-6 py-4 font-extrabold w-12">#</th>
+            <th class="px-6 py-4 font-extrabold">IPO Name</th>
+            <th class="px-6 py-4 font-extrabold">Signal</th>
+            <th class="px-6 py-4 font-extrabold">Confidence</th>
+            <th class="px-6 py-4 font-extrabold cursor-pointer hover:text-white" onclick="setSort('score_desc')">Score ↕</th>
+            <th class="px-6 py-4 font-extrabold cursor-pointer hover:text-white" onclick="setSort('articles_desc')">Articles ↕</th>
+            <th class="px-6 py-4 font-extrabold">Sentiment</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody" class="divide-y divide-slate-800/50 data-font">
+          <tr><td colspan="7" class="px-6 py-20 text-center text-slate-600">Loading data...</td></tr>
+        </tbody>
+      </table>
+      <div class="px-6 py-3 bg-slate-900/40 border-t border-slate-800 flex items-center justify-between">
+        <p class="text-slate-600 text-xs data-font" id="tableCount">—</p>
+        <div class="flex gap-2">
+          <button onclick="prevPage()" class="px-3 py-1 rounded bg-slate-800 text-slate-400 text-xs hover:text-white transition-colors">← Prev</button>
+          <span class="px-3 py-1 text-slate-500 text-xs data-font" id="pageLabel">1</span>
+          <button onclick="nextPage()" class="px-3 py-1 rounded bg-slate-800 text-slate-400 text-xs hover:text-white transition-colors">Next →</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── FOOTER ── -->
+  <footer class="border-t border-slate-800 bg-surface/60 px-10 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <span class="size-2 rounded-full bg-primary pulsing-dot"></span>
+        <span class="text-slate-600 text-[10px] uppercase font-extrabold tracking-widest">System Operational</span>
+      </div>
+      <div class="h-3 w-px bg-slate-800"></div>
+      <span class="text-slate-700 text-[10px] font-mono" id="footerSync">—</span>
+    </div>
+    <div class="flex gap-6 text-slate-700 text-[10px] uppercase font-extrabold tracking-widest">
+      <span class="hover:text-primary cursor-pointer transition-colors">FinBERT Powered</span>
+      <span class="hover:text-primary cursor-pointer transition-colors">Google News</span>
+      <span class="hover:text-primary cursor-pointer transition-colors">NSE Data</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ── IPO DETAIL MODAL ── -->
+<div id="modalOverlay" onclick="handleOverlayClick(event)"
+  class="fixed inset-0 z-[100] modal-backdrop hidden items-center justify-center">
+  <div id="modal" class="relative bg-[#0d1117] border border-slate-800 rounded-2xl w-[700px] max-w-[95vw] max-h-[88vh] overflow-y-auto shadow-2xl">
+
+    <button onclick="closeModal()" class="absolute top-5 right-5 size-9 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white transition-colors z-10">
+      <span class="material-symbols-outlined text-[18px]">close</span>
+    </button>
+
+    <!-- Modal header -->
+    <div class="px-8 pt-8 pb-6 border-b border-slate-800">
+      <div class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-2">IPO Analysis</div>
+      <div class="text-white text-3xl font-extrabold font-display mb-4" id="modalName">—</div>
+      <div class="flex items-center gap-3" id="modalBadges"></div>
+    </div>
+
+    <!-- Modal stats -->
+    <div class="grid grid-cols-3 gap-4 p-8 pb-0" id="modalStats"></div>
+
+    <!-- Score gauge -->
+    <div class="px-8 pt-6">
+      <div class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-4">Signal Gauge</div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div id="modalGauge"></div>
+      </div>
+    </div>
+
+    <!-- Score breakdown -->
+    <div class="px-8 pt-6">
+      <div class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-4">Score Breakdown</div>
+      <div class="grid grid-cols-2 gap-3" id="modalBreakdown"></div>
+    </div>
+
+    <!-- Coming soon -->
+    <div class="px-8 py-6">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-3">
+          Coming Soon
+          <span class="ml-2 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[9px]">ROADMAP</span>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <span class="text-slate-600 text-xs">📊 GMP (Grey Market Premium)</span>
+          <span class="text-slate-600 text-xs">📋 Promoter Holdings</span>
+          <span class="text-slate-600 text-xs">🔄 Subscription Status</span>
+          <span class="text-slate-600 text-xs">💰 OFS Details</span>
+          <span class="text-slate-600 text-xs">📈 Price Band & Lot Size</span>
+          <span class="text-slate-600 text-xs">🏛️ Anchor Investors</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA  — paste your real CSV data here as JSON
+// Run: python tools/csv_to_json.py  to regenerate
+// ─────────────────────────────────────────────
+const RAW_DATA = [
+  { ipo_name:"Kiaasa Retail",              signal:"APPLY",   confidence:"HIGH",   final_score:0.7017, article_count:9,  avg_sentiment_score:0.1975, score_sentiment:0.797, score_buzz:0.612, score_consistency:0.821, score_trend:0.520 },
+  { ipo_name:"Omnitech Engineering",       signal:"APPLY",   confidence:"MEDIUM", final_score:0.6484, article_count:18, avg_sentiment_score:0.1326, score_sentiment:0.699, score_buzz:0.734, score_consistency:0.712, score_trend:0.510 },
+  { ipo_name:"ICICI Prudential AMC",       signal:"APPLY",   confidence:"MEDIUM", final_score:0.6396, article_count:12, avg_sentiment_score:0.1236, score_sentiment:0.685, score_buzz:0.671, score_consistency:0.698, score_trend:0.510 },
+  { ipo_name:"Accord Transformer",         signal:"APPLY",   confidence:"MEDIUM", final_score:0.6202, article_count:7,  avg_sentiment_score:0.1223, score_sentiment:0.683, score_buzz:0.581, score_consistency:0.702, score_trend:0.530 },
+  { ipo_name:"Gaudium IVF",               signal:"APPLY",   confidence:"MEDIUM", final_score:0.6118, article_count:74, avg_sentiment_score:0.0409, score_sentiment:0.562, score_buzz:0.921, score_consistency:0.612, score_trend:0.480 },
+  { ipo_name:"Bharat Coking Coal",        signal:"APPLY",   confidence:"MEDIUM", final_score:0.5817, article_count:10, avg_sentiment_score:0.0988, score_sentiment:0.648, score_buzz:0.631, score_consistency:0.661, score_trend:0.490 },
+  { ipo_name:"Midwest",                   signal:"APPLY",   confidence:"MEDIUM", final_score:0.5802, article_count:4,  avg_sentiment_score:0.1596, score_sentiment:0.739, score_buzz:0.521, score_consistency:0.701, score_trend:0.500 },
+  { ipo_name:"PNGS Reva Diamond Jewellery",signal:"NEUTRAL", confidence:"LOW",   final_score:0.5700, article_count:50, avg_sentiment_score:0.0175, score_sentiment:0.525, score_buzz:0.881, score_consistency:0.542, score_trend:0.490 },
+  { ipo_name:"CleanMax Enviro Energy",    signal:"NEUTRAL", confidence:"LOW",    final_score:0.5521, article_count:61, avg_sentiment_score:0.0040, score_sentiment:0.506, score_buzz:0.901, score_consistency:0.521, score_trend:0.500 },
+  { ipo_name:"Fractal Analytics",         signal:"NEUTRAL", confidence:"LOW",    final_score:0.5303, article_count:38, avg_sentiment_score:0.0012, score_sentiment:0.502, score_buzz:0.831, score_consistency:0.510, score_trend:0.490 },
+  { ipo_name:"Shree Ram Twistex",         signal:"NEUTRAL", confidence:"LOW",    final_score:0.5373, article_count:34, avg_sentiment_score:0.0003, score_sentiment:0.500, score_buzz:0.811, score_consistency:0.509, score_trend:0.480 },
+  { ipo_name:"Lenskart",                  signal:"NEUTRAL", confidence:"LOW",    final_score:0.5330, article_count:19, avg_sentiment_score:0.0187, score_sentiment:0.528, score_buzz:0.741, score_consistency:0.531, score_trend:0.490 },
+  { ipo_name:"Yaap Digital",              signal:"NEUTRAL", confidence:"LOW",    final_score:0.5318, article_count:14, avg_sentiment_score:0.0347, score_sentiment:0.552, score_buzz:0.691, score_consistency:0.548, score_trend:0.500 },
+  { ipo_name:"Meesho",                    signal:"NEUTRAL", confidence:"LOW",    final_score:0.5154, article_count:13, avg_sentiment_score:0.0166, score_sentiment:0.525, score_buzz:0.681, score_consistency:0.519, score_trend:0.510 },
+  { ipo_name:"LG Electronics",            signal:"NEUTRAL", confidence:"LOW",    final_score:0.5117, article_count:9,  avg_sentiment_score:0.0283, score_sentiment:0.542, score_buzz:0.621, score_consistency:0.528, score_trend:0.490 },
+  { ipo_name:"Tata Capital",              signal:"NEUTRAL", confidence:"LOW",    final_score:0.5058, article_count:9,  avg_sentiment_score:0.0211, score_sentiment:0.532, score_buzz:0.621, score_consistency:0.521, score_trend:0.500 },
+  { ipo_name:"PhysicsWallah",             signal:"NEUTRAL", confidence:"LOW",    final_score:0.5186, article_count:5,  avg_sentiment_score:0.0661, score_sentiment:0.600, score_buzz:0.551, score_consistency:0.570, score_trend:0.490 },
+  { ipo_name:"PhonePe",                   signal:"NEUTRAL", confidence:"LOW",    final_score:0.4692, article_count:5,  avg_sentiment_score:-0.0011, score_sentiment:0.498, score_buzz:0.551, score_consistency:0.492, score_trend:0.510 },
+  { ipo_name:"Pine Labs",                 signal:"NEUTRAL", confidence:"LOW",    final_score:0.4770, article_count:5,  avg_sentiment_score:0.0092,  score_sentiment:0.514, score_buzz:0.551, score_consistency:0.508, score_trend:0.500 },
+  { ipo_name:"Urban Company",             signal:"NEUTRAL", confidence:"LOW",    final_score:0.4913, article_count:8,  avg_sentiment_score:0.0065,  score_sentiment:0.510, score_buzz:0.601, score_consistency:0.505, score_trend:0.490 },
+  { ipo_name:"Shadowfax Technologies",    signal:"NEUTRAL", confidence:"LOW",    final_score:0.5004, article_count:5,  avg_sentiment_score:0.0569,  score_sentiment:0.585, score_buzz:0.551, score_consistency:0.558, score_trend:0.480 },
+  { ipo_name:"Wakefit",                   signal:"AVOID",   confidence:"HIGH",   final_score:0.2438, article_count:4,  avg_sentiment_score:-0.2135, score_sentiment:0.180, score_buzz:0.521, score_consistency:0.201, score_trend:0.400 },
+  { ipo_name:"Udaan Paper Industries",    signal:"AVOID",   confidence:"MEDIUM", final_score:0.4177, article_count:1,  avg_sentiment_score:-0.0108, score_sentiment:0.484, score_buzz:0.401, score_consistency:0.431, score_trend:0.490 },
+  { ipo_name:"Shivalaya Construction",    signal:"AVOID",   confidence:"MEDIUM", final_score:0.4010, article_count:1,  avg_sentiment_score:-0.0356, score_sentiment:0.447, score_buzz:0.401, score_consistency:0.412, score_trend:0.490 },
+  { ipo_name:"Orkla Foods",               signal:"AVOID",   confidence:"MEDIUM", final_score:0.4196, article_count:1,  avg_sentiment_score:-0.0080, score_sentiment:0.488, score_buzz:0.401, score_consistency:0.440, score_trend:0.490 },
+  { ipo_name:"Renny Strips",              signal:"AVOID",   confidence:"MEDIUM", final_score:0.4200, article_count:1,  avg_sentiment_score:-0.0075, score_sentiment:0.489, score_buzz:0.401, score_consistency:0.441, score_trend:0.490 },
+];
+
+// ── State ──
+let allData      = [...RAW_DATA];
+let filtered     = [...allData];
+let signalFilter = 'ALL';
+let confFilter   = 'ALL';
+let sortMode     = 'score_desc';
+let searchQuery  = '';
+let page         = 1;
+const PAGE_SIZE  = 20;
+
+// ── Init ──
+function init() {
+  const now = new Date();
+  const fmt = now.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('lastUpdated').textContent = 'Synced ' + fmt;
+  document.getElementById('footerSync').textContent  = 'Last sync: ' + now.toLocaleTimeString('en-IN');
+
+  document.getElementById('headerSearch').addEventListener('input', e => {
+    searchQuery = e.target.value.toLowerCase().trim();
+    page = 1;
+    applyFilters();
+  });
+
+  updateStats();
+  applyFilters();
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent   = allData.length;
+  document.getElementById('statApply').textContent   = allData.filter(d=>d.signal==='APPLY').length;
+  document.getElementById('statNeutral').textContent = allData.filter(d=>d.signal==='NEUTRAL').length;
+  document.getElementById('statAvoid').textContent   = allData.filter(d=>d.signal==='AVOID').length;
+  document.getElementById('statArticles').textContent= allData.reduce((s,d)=>s+d.article_count,0).toLocaleString();
+}
+
+// ── Filters ──
+function setFilter(f) {
+  signalFilter = f; page = 1;
+  // Reset all buttons
+  ['ALL','APPLY','NEUTRAL','AVOID'].forEach(s => {
+    const btn = document.getElementById('btn-'+s);
+    btn.className = 'filter-chip px-4 py-2 rounded-lg text-sm font-bold bg-surface border border-slate-800 text-slate-400 hover:text-white';
+  });
+  // Active style
+  const active = document.getElementById('btn-'+f);
+  if (f==='ALL')     active.className = 'filter-chip px-4 py-2 rounded-lg text-sm font-bold bg-primary text-[#080c10] border border-primary';
+  if (f==='APPLY')   active.className = 'filter-chip px-4 py-2 rounded-lg text-sm font-bold bg-primary/10 text-primary border border-primary/30';
+  if (f==='NEUTRAL') active.className = 'filter-chip px-4 py-2 rounded-lg text-sm font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30';
+  if (f==='AVOID')   active.className = 'filter-chip px-4 py-2 rounded-lg text-sm font-bold bg-red-500/10 text-red-400 border border-red-500/30';
+  applyFilters();
+}
+
+function setConf(c)  { confFilter = c; page = 1; applyFilters(); }
+function setSort(s)  { sortMode = s; document.getElementById('sortSelect').value = s; applyFilters(); }
+function prevPage()  { if (page > 1) { page--; renderTable(); } }
+function nextPage()  { if (page * PAGE_SIZE < filtered.length) { page++; renderTable(); } }
+
+function applyFilters() {
+  filtered = allData.filter(d => {
+    if (signalFilter !== 'ALL' && d.signal !== signalFilter) return false;
+    if (confFilter   !== 'ALL' && d.confidence !== confFilter) return false;
+    if (searchQuery && !d.ipo_name.toLowerCase().includes(searchQuery)) return false;
+    return true;
+  });
+  filtered.sort((a,b) => {
+    if (sortMode==='score_desc')    return b.final_score - a.final_score;
+    if (sortMode==='score_asc')     return a.final_score - b.final_score;
+    if (sortMode==='articles_desc') return b.article_count - a.article_count;
+    if (sortMode==='name_asc')      return a.ipo_name.localeCompare(b.ipo_name);
+  });
+  renderTable();
+}
+
+// ── Colors ──
+function sigColor(s) { return s==='APPLY'?'#00e6a1':s==='AVOID'?'#ef4444':'#4a9eff'; }
+function sigBg(s)    { return s==='APPLY'?'rgba(0,230,161,0.1)':s==='AVOID'?'rgba(239,68,68,0.1)':'rgba(74,158,255,0.1)'; }
+function sigBorder(s){ return s==='APPLY'?'rgba(0,230,161,0.25)':s==='AVOID'?'rgba(239,68,68,0.25)':'rgba(74,158,255,0.25)'; }
+function sentColor(v){ return v>0.05?'#00e6a1':v<-0.05?'#ef4444':'#64748b'; }
+function confColor(c){ return c==='HIGH'?'#eab308':c==='MEDIUM'?'#a855f7':'#475569'; }
+function confBg(c)   { return c==='HIGH'?'rgba(234,179,8,0.1)':c==='MEDIUM'?'rgba(168,85,247,0.1)':'rgba(71,85,105,0.1)'; }
+
+// ── Render Table ──
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const start = (page-1)*PAGE_SIZE;
+  const slice = filtered.slice(start, start+PAGE_SIZE);
+  const total = filtered.length;
+
+  document.getElementById('tableCount').textContent =
+    `Showing ${start+1}–${Math.min(start+slice.length, total)} of ${total} IPOs`;
+  document.getElementById('pageLabel').textContent =
+    `${page} / ${Math.max(1, Math.ceil(total/PAGE_SIZE))}`;
+
+  if (!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-20 text-center text-slate-600 text-sm">No IPOs match your filters</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = slice.map((d, i) => {
+    const rank = start + i + 1;
+    const initials = d.ipo_name.split(' ').slice(0,2).map(w=>w[0]).join('');
+    const scorePct = Math.round(d.final_score * 100);
+    const sentSign = d.avg_sentiment_score >= 0 ? '+' : '';
+    const sentPct  = Math.round(d.avg_sentiment_score * 100);
+    return `
+    <tr class="hover:bg-slate-800/20 cursor-pointer" onclick="openModal('${d.ipo_name.replace(/'/g,"\\'")}')">
+      <td class="px-6 py-5 text-slate-600 text-xs">${String(rank).padStart(2,'0')}</td>
+      <td class="px-6 py-5">
+        <div class="flex items-center gap-3">
+          <div class="size-9 rounded-lg flex items-center justify-center text-sm font-extrabold"
+               style="background:${sigBg(d.signal)};color:${sigColor(d.signal)}">
+            ${initials}
+          </div>
+          <div>
+            <p class="text-white font-bold font-display text-sm">${d.ipo_name}</p>
+            <p class="text-slate-600 text-[10px] uppercase tracking-wider">${d.article_count} articles</p>
+          </div>
+        </div>
+      </td>
+      <td class="px-6 py-5">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider border"
+              style="background:${sigBg(d.signal)};color:${sigColor(d.signal)};border-color:${sigBorder(d.signal)}">
+          <span class="size-1.5 rounded-full" style="background:${sigColor(d.signal)}"></span>
+          ${d.signal}
+        </span>
+      </td>
+      <td class="px-6 py-5">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border"
+              style="background:${confBg(d.confidence)};color:${confColor(d.confidence)};border-color:${confColor(d.confidence)}40">
+          ${d.confidence}
+        </span>
+      </td>
+      <td class="px-6 py-5">
+        <div class="flex items-center gap-3">
+          <div class="w-20 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-full rounded-full score-fill" style="width:${scorePct}%;background:${sigColor(d.signal)}"></div>
+          </div>
+          <span class="text-white text-xs font-bold">${d.final_score.toFixed(3)}</span>
+        </div>
+      </td>
+      <td class="px-6 py-5 text-slate-400 text-sm">${d.article_count}</td>
+      <td class="px-6 py-5">
+        <span class="text-sm font-bold" style="color:${sentColor(d.avg_sentiment_score)}">
+          ${sentSign}${sentPct}%
+        </span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Modal ──
+function openModal(name) {
+  const d = allData.find(x => x.ipo_name === name);
+  if (!d) return;
+
+  document.getElementById('modalName').textContent = d.ipo_name;
+
+  document.getElementById('modalBadges').innerHTML = `
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase border"
+          style="background:${sigBg(d.signal)};color:${sigColor(d.signal)};border-color:${sigBorder(d.signal)}">
+      <span class="size-1.5 rounded-full" style="background:${sigColor(d.signal)}"></span>${d.signal}
+    </span>
+    <span class="inline-flex items-center px-2 py-1 rounded text-[10px] font-extrabold uppercase border"
+          style="background:${confBg(d.confidence)};color:${confColor(d.confidence)};border-color:${confColor(d.confidence)}40">
+      ${d.confidence} CONFIDENCE
+    </span>`;
+
+  document.getElementById('modalStats').innerHTML = `
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+      <p class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-2">Final Score</p>
+      <p class="text-3xl font-extrabold font-display" style="color:${sigColor(d.signal)}">${d.final_score.toFixed(4)}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+      <p class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-2">Articles</p>
+      <p class="text-yellow-400 text-3xl font-extrabold font-display">${d.article_count}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+      <p class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-2">Avg Sentiment</p>
+      <p class="text-3xl font-extrabold font-display" style="color:${sentColor(d.avg_sentiment_score)}">
+        ${d.avg_sentiment_score >= 0 ? '+' : ''}${(d.avg_sentiment_score*100).toFixed(1)}%
+      </p>
+    </div>`;
+
+  // Gauge
+  const pct   = Math.min(Math.max(d.final_score, 0), 1);
+  const angle = pct * 180 - 90;
+  const rad   = angle * Math.PI / 180;
+  const cx=200, cy=110, r=80;
+  const nx = cx + r * Math.sin(rad);
+  const ny = cy - r * Math.cos(rad);
+
+  document.getElementById('modalGauge').innerHTML = `
+    <svg viewBox="0 0 400 130" style="width:100%;height:130px">
+      <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="14" stroke-linecap="round"/>
+      <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx-r*0.5} ${cy-r*0.866}" fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="round" opacity="0.5"/>
+      <path d="M ${cx-r*0.5} ${cy-r*0.866} A ${r} ${r} 0 0 1 ${cx+r*0.5} ${cy-r*0.866}" fill="none" stroke="#4a9eff" stroke-width="14" opacity="0.5"/>
+      <path d="M ${cx+r*0.5} ${cy-r*0.866} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="#00e6a1" stroke-width="14" stroke-linecap="round" opacity="0.5"/>
+      <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${sigColor(d.signal)}" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="6" fill="${sigColor(d.signal)}" filter="url(#glow)"/>
+      <defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <text x="50"  y="128" fill="#ef4444" font-size="10" font-family="JetBrains Mono" text-anchor="middle" font-weight="700">AVOID</text>
+      <text x="200" y="22"  fill="#4a9eff" font-size="10" font-family="JetBrains Mono" text-anchor="middle" font-weight="700">NEUTRAL</text>
+      <text x="350" y="128" fill="#00e6a1" font-size="10" font-family="JetBrains Mono" text-anchor="middle" font-weight="700">APPLY</text>
+      <text x="${cx}" y="${cy+28}" fill="white" font-size="20" font-family="Manrope" text-anchor="middle" font-weight="800">${d.final_score.toFixed(3)}</text>
+    </svg>`;
+
+  // Breakdown bars
+  const components = [
+    { label:'Sentiment',   val:d.score_sentiment,   color:'#00e6a1' },
+    { label:'Consistency', val:d.score_consistency,  color:'#a855f7' },
+    { label:'Buzz',        val:d.score_buzz,          color:'#eab308' },
+    { label:'Trend',       val:d.score_trend,         color:'#4a9eff' },
+  ];
+
+  document.getElementById('modalBreakdown').innerHTML = components.map(c => `
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+      <p class="text-slate-500 text-[10px] uppercase tracking-widest font-extrabold mb-3">${c.label}</p>
+      <div class="flex items-center gap-3">
+        <div class="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+          <div class="h-full rounded-full" style="width:${c.val*100}%;background:${c.color}"></div>
+        </div>
+        <span class="text-white text-sm font-bold data-font min-w-[36px] text-right">${c.val.toFixed(2)}</span>
+      </div>
+    </div>`).join('');
+
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('hidden');
+  overlay.classList.add('flex');
+}
+
+function closeModal() {
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.add('hidden');
+  overlay.classList.remove('flex');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+// ── Export CSV ──
+function exportCSV() {
+  const headers = ['ipo_name','signal','confidence','final_score','article_count','avg_sentiment_score'];
+  const rows = filtered.map(d => headers.map(h => d[h]).join(','));
+  const blob = new Blob([headers.join(',')+'\n'+rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'greysignal_signals.csv';
+  a.click();
+}
+
+init();
+</script>
+</body>
+</html>
