@@ -12,7 +12,6 @@ import math
 
 CONN_STR = os.environ.get(
     "DATABASE_URL",
-    "postgresql://neondb_owner:npg_3uLskzKn6BSp@ep-dawn-tooth-aif90raf-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 )
 
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -7,7 +7,6 @@ from psycopg2.extras import execute_values
 import os
 import math
 
-CONN_STR = "postgresql://neondb_owner:npg_3uLskzKn6BSp@ep-dawn-tooth-aif90raf-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SIGNALS_CSV = os.path.join(BASE_DIR, "data", "processed", "ipo_final_signals.csv")
