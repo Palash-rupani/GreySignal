@@ -25,10 +25,12 @@ TREND_CSV   = os.path.join(BASE_DIR, "data", "processed", "ipo_sentiment_trend.c
 def clean(v):
     if v is None:
         return None
+    # Convert numpy types to native Python
+    if hasattr(v, 'item'):
+        v = v.item()
     if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
         return None
     return v
-
 
 def get_gmp_lookup():
     if not os.path.exists(GMP_CSV):
