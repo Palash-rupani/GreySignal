@@ -1,7 +1,6 @@
 """
-db_writer.py — Called at end of pipeline to push results to Neon DB
+db_writer.py — Pushes pipeline results to Neon DB
 Usage: python tools/db_writer.py
-Add this as the last step in your run_pipeline.bat
 """
 
 import pandas as pd
@@ -9,10 +8,13 @@ import psycopg2
 from psycopg2.extras import execute_values
 import os
 import math
+from dotenv import load_dotenv
 
-CONN_STR = os.environ.get(
-    "DATABASE_URL",
-)
+load_dotenv()
+
+CONN_STR = os.environ.get("DATABASE_URL")
+if not CONN_STR:
+    raise ValueError("DATABASE_URL environment variable not set")
 
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SIGNALS_CSV = os.path.join(BASE_DIR, "data", "processed", "ipo_final_signals.csv")
@@ -28,9 +30,10 @@ def clean(v):
     return v
 
 
-def get_gmp_map():
+def get_gmp_lookup():
     if not os.path.exists(GMP_CSV):
-        return {}
+        print("  No GMP file found, skipping GMP merge")
+        return lambda name: (None, None)
     try:
         from rapidfuzz import process, fuzz
         df = pd.read_csv(GMP_CSV)
@@ -44,7 +47,8 @@ def get_gmp_map():
                 return clean(row.get("gmp")), clean(row.get("gmp_percent"))
             return None, None
         return lookup
-    except Exception:
+    except Exception as e:
+        print(f"  GMP lookup failed: {e}")
         return lambda name: (None, None)
 
 
@@ -53,18 +57,23 @@ def main():
     print("DB Writer — pushing pipeline results to Neon")
     print("=" * 50)
 
+    # Load signals
+    if not os.path.exists(SIGNALS_CSV):
+        print(f"ERROR: signals CSV not found at {SIGNALS_CSV}")
+        return
+
     df = pd.read_csv(SIGNALS_CSV)
     print(f"Loaded {len(df)} signals")
 
-    gmp_lookup = get_gmp_map()
+    gmp_lookup = get_gmp_lookup()
 
     conn = psycopg2.connect(CONN_STR)
     cur  = conn.cursor()
 
-    # Upsert signals
+    # Build rows — 12 values matching 12 columns
     rows = []
     for _, r in df.iterrows():
-        gmp, gmp_pct = gmp_lookup(r["ipo_name"]) if callable(gmp_lookup) else (None, None)
+        gmp, gmp_pct = gmp_lookup(r["ipo_name"])
         rows.append((
             str(r["ipo_name"]),
             str(r.get("signal", "NEUTRAL")),
@@ -80,11 +89,12 @@ def main():
             gmp_pct,
         ))
 
+    # Upsert signals — 12 columns, 12 values
     execute_values(cur, """
         INSERT INTO ipo_signals (
             ipo_name, signal, confidence, final_score, article_count,
             avg_sentiment, score_sentiment, score_buzz, score_consistency,
-            score_trend, gmp, gmp_percent, updated_at
+            score_trend, gmp, gmp_percent
         ) VALUES %s
         ON CONFLICT (ipo_name) DO UPDATE SET
             signal            = EXCLUDED.signal,
@@ -103,12 +113,17 @@ def main():
     conn.commit()
     print(f"✅ {len(rows)} IPOs upserted to DB")
 
-    # Upsert trend
+    # Upsert trend data
     if os.path.exists(TREND_CSV):
         tdf = pd.read_csv(TREND_CSV)
         cur.execute("DELETE FROM ipo_trend")
         trend_rows = [
-            (str(r["ipo_name"]), str(r["week"]), clean(r.get("avg_sentiment")), int(r.get("article_count", 0)))
+            (
+                str(r["ipo_name"]),
+                str(r["week"]),
+                clean(r.get("avg_sentiment")),
+                int(r.get("article_count", 0)),
+            )
             for _, r in tdf.iterrows()
         ]
         execute_values(cur, """
@@ -117,10 +132,28 @@ def main():
         """, trend_rows)
         conn.commit()
         print(f"✅ {len(trend_rows)} trend rows updated")
+    else:
+        print("  No trend CSV found, skipping")
+
+    # Verify
+    cur.execute("SELECT COUNT(*) FROM ipo_signals")
+    count = cur.fetchone()[0]
+    cur.execute("""
+        SELECT ipo_name, signal, final_score, gmp
+        FROM ipo_signals
+        ORDER BY final_score DESC NULLS LAST
+        LIMIT 5
+    """)
+    top = cur.fetchall()
+
+    print(f"\n✅ Database now has {count} IPOs")
+    print("Top 5:")
+    for row in top:
+        print(f"  {row[0]:<35} {row[1]:<8} {str(row[2]):<8}  GMP: {row[3]}")
 
     cur.close()
     conn.close()
-    print("✅ Done!")
+    print("\n✅ Done!")
 
 
 if __name__ == "__main__":
