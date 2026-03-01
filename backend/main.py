@@ -30,6 +30,9 @@ def clean(v):
         return None
     if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
         return None
+    # Convert datetime to string
+    if hasattr(v, 'isoformat'):
+        return v.isoformat()
     return v
 
 
