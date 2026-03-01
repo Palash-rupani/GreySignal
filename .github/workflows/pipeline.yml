@@ -1,0 +1,62 @@
+name: GreySignal Daily Pipeline
+
+on:
+  schedule:
+    # 3:30 AM UTC = 9:00 AM IST every day
+    - cron: '30 3 * * *'
+  workflow_dispatch: # manual trigger from GitHub UI anytime
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        run: python scraping/google_news.py
+
+      - name: Clean text
+        run: python nlp/cleaning.py
+
+      - name: Filter IPO articles
+        run: python nlp/ipo_filter.py
+
+      - name: Extract IPO names
+        run: python nlp/ipo_name_extractor.py
+
+      - name: Score sentiment
+        run: python nlp/sentiment.py
+
+      - name: Aggregate sentiment
+        run: python nlp/aggregate_sentiment.py
+
+      - name: Generate signals
+        run: python nlp/ipo_signal.py
+
+      - name: Scrape GMP
+        run: python fundamentals/fetch_gmp.py
+
+      - name: Write to database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python tools/db_writer.py
+
+      - name: Upload pipeline outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-outputs-${{ github.run_number }}
+          path: data/processed/
+          retention-days: 7
