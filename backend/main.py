@@ -10,7 +10,7 @@ app = FastAPI(title="GreySignal API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    allow_origins=["*"],  # temporarily allow all origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
