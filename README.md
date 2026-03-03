@@ -1,109 +1,167 @@
+
 # GreySignal
 
-GreySignal is an NLP-driven research system designed to analyze sentiment, fundamentals,
-and grey-market signals of Indian IPOs before listing to help assess whether retail
-investors should apply.
-
----
+> A market intelligence dashboard that analyzes news sentiment and current coverage around companies ahead of their IPO — helping investors make informed decisions before a stock hits the market.
 
 ## Project Documentaion
 -https://docs.google.com/document/d/1EOJDnqaCvTLfFMGPiRTyavlOOKWewe9dmcUq23U-_5Y/edit?usp=sharing
 
----
-## 📌 What GreySignal Does
+## Live Demo
 
-- Scrapes social platforms (Reddit, X, forums) and financial news for IPO discussions
-- Quantifies bullish vs bearish sentiment using NLP models
-- Extracts fundamentals from DRHP / RHP prospectus documents
-- Tracks grey market premium (GMP) and subscription-related signals
-- Combines all signals into an Apply / Neutral / Avoid recommendation
-- Provides explanations for each recommendation
+🔗 **Frontend:** [grey-signal.vercel.app](https://grey-signal.vercel.app)  
+⚙️ **Backend API:** [greysignal.onrender.com](https://greysignal.onrender.com)
+
+> **Note:** Backend is hosted on Render's free tier and may take 30–60 seconds to wake up on first visit after a period of inactivity. The frontend will load instantly — just wait a moment for the data to appear.
 
 ---
 
-## 🎯 Project Goal
+## What it does
 
-Predict the attractiveness of applying to an IPO *before listing* by estimating
-likely listing-day performance using:
+GreySignal scrapes and processes hundreds of financial news articles daily, runs them through a fine-tuned NLP model (FinBERT), and generates a **APPLY / NEUTRAL / AVOID** signal for each upcoming IPO based on:
 
-- Social sentiment
-- News tone
-- Financial fundamentals
-- Grey-market trends
-- Sector conditions
-- Historical IPO outcomes
+- **Sentiment** — is the news coverage positive or negative?
+- **Consistency** — is sentiment stable across multiple articles?
+- **Buzz** — how much coverage is the IPO getting?
+- **Trend** — is sentiment improving or declining over time?
+- **GMP** — live grey market premium scraped daily
 
 ---
 
-## 🧠 Tech Stack
+## Architecture
 
-- Python, Pandas, NumPy
-- PyTorch & HuggingFace Transformers
-- Web scraping (PRAW, BeautifulSoup, Selenium)
-- PDF parsing & OCR (pdfplumber, pytesseract)
-- Scikit-learn, XGBoost
-- Streamlit dashboard
-- FastAPI backend
-- SHAP for model explainability
-- PostgreSQL / SQLite for storage
+```
+Google News RSS
+      ↓
+  Scraper (Python + feedparser)
+      ↓
+  Text Cleaning + IPO Filtering
+      ↓
+  FinBERT Sentiment Scoring
+      ↓
+  Signal Generator (weighted scoring formula)
+      ↓
+  GMP Scraper (ipowatch.in)
+      ↓
+  Neon PostgreSQL Database
+      ↓
+  FastAPI Backend (Render)
+      ↓
+  React Frontend (Vercel)
+```
+
+**Automated:** GitHub Actions runs the full pipeline daily at 9:00 AM IST — no manual intervention needed.
 
 ---
 
-## 📂 Repository Structure
+## Tech Stack
 
-greysignal-ipo/
-│
+| Layer | Technology |
+|---|---|
+| NLP Model | FinBERT (fine-tuned BERT for financial sentiment) |
+| Pipeline | Python, pandas, feedparser, rapidfuzz |
+| Backend | FastAPI, psycopg2 |
+| Database | PostgreSQL (Neon) |
+| Frontend | React, Recharts, React Router |
+| Deployment | Vercel (frontend), Render (backend) |
+| Automation | GitHub Actions (daily cron) |
+
+---
+
+## Signal Formula
+
+```
+Final Score = (Sentiment × 0.40) + (Consistency × 0.25) + (Buzz × 0.20) + (Trend × 0.15)
+
+Score ≥ 0.60   →  APPLY
+Score 0.40–0.60  →  NEUTRAL
+Score ≤ 0.40   →  AVOID
+```
+
+---
+
+## Features
+
+- 📊 Dashboard with 150+ IPOs ranked by signal strength
+- 🔴🟡🟢 APPLY / NEUTRAL / AVOID signals with confidence levels
+- 📈 Live GMP (Grey Market Premium) data updated daily
+- 🔍 Search, filter by signal/confidence, sort by score or GMP
+- 📄 IPO detail page with score breakdown and sentiment gauge
+- ⚡ Fully automated pipeline — fresh data every morning at 9 AM IST
+
+---
+
+## Running Locally
+
+**Prerequisites:** Python 3.11+, Node.js 18+, a Neon PostgreSQL database
+
+**Backend:**
+```bash
+cd backend
+pip install -r requirements.txt
+
+# Create .env file
+echo "DATABASE_URL=your_neon_connection_string" > .env
+
+uvicorn main:app --reload
+# API available at http://localhost:8000
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+
+# Create .env.local file
+echo "VITE_API_URL=http://localhost:8000" > .env.local
+
+npm run dev
+# App available at http://localhost:5173
+```
+
+**Pipeline (run manually):**
+```bash
+python scraping/google_news.py
+python nlp/cleaning.py
+python nlp/ipo_filter.py
+python nlp/ipo_name_extractor.py
+python nlp/sentiment.py
+python nlp/aggregate_sentiment.py
+python nlp/ipo_signal.py
+python fundamentals/fetch_gmp.py
+python tools/db_writer.py
+```
+
+---
+
+## Project Structure
+
+```
+GreySignal/
+├── scraping/          # News scrapers (Google News RSS, IPO discovery)
+├── nlp/               # Text cleaning, sentiment scoring, signal generation
+├── fundamentals/      # GMP scraper
+├── tools/             # DB setup and writer scripts
+├── backend/           # FastAPI app
+├── frontend/          # React app
 ├── data/
-│ ├── raw/
-│ ├── processed/
-│ └── labels/
-│
-├── scraping/
-├── nlp/
-├── fundamentals/
-├── features/
-├── models/
-├── dashboard/
-├── notebooks/
-├── docs/
-│
-├── requirements.txt
-└── README.md
-
+│   ├── raw/           # Scraped data
+│   └── processed/     # Cleaned and scored data
+└── .github/workflows/ # GitHub Actions pipeline
+```
 
 ---
 
-## ⚠️ Disclaimer
+## Roadmap
 
-GreySignal is for educational and research purposes only.
-This project does **not** provide financial or investment advice.
-Use at your own risk.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Historical Indian IPO dataset creation  
-- [ ] Social & news scraping pipelines  
-- [ ] Sentiment analysis models  
-- [ ] DRHP / RHP NLP extraction  
-- [ ] GMP & subscription tracking  
-- [ ] Feature engineering  
-- [ ] Prediction model training  
-- [ ] Explainability layer  
-- [ ] Streamlit dashboard  
-
-Detailed plans are in the `/docs` folder.
+- [ ] Subscription data (NSE live subscription status)
+- [ ] Price band + lot size
+- [ ] Promoter holdings + OFS details
+- [ ] Historical backtesting to validate signal accuracy
+- [ ] Email/WhatsApp alerts for strong APPLY signals
 
 ---
 
-## 🤝 Contributing
+## Author
 
-This is currently a personal research project.
-Contributions and suggestions are welcome once the core MVP is ready.
-
----
-
-## 📬 Contact
-
-Created as a data-science & NLP project for Indian capital markets research.
+**Palash Rupani**  
+[github.com/Palash-rupani](https://github.com/Palash-rupani)
