@@ -4,7 +4,7 @@
 > A market intelligence dashboard that analyzes news sentiment and current coverage around companies ahead of their IPO — helping investors make informed decisions before a stock hits the market.
 
 ## Project Documentaion
--https://docs.google.com/document/d/1EOJDnqaCvTLfFMGPiRTyavlOOKWewe9dmcUq23U-_5Y/edit?usp=sharing
+https://docs.google.com/document/d/1j9-JBmBEhBGwKm3Ogbar5QUiq9mPM1r5_kYDdrKn7Uw/edit?usp=sharing
 
 ## Live Demo
 
